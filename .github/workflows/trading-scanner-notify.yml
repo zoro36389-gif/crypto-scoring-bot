@@ -1,0 +1,54 @@
+name: Trading Scanner Notify 5.6.1
+
+on:
+  schedule:
+    - cron: '10 21 * * *'
+    - cron: '10 1 * * *'
+    - cron: '10 5 * * *'
+    - cron: '10 9 * * *'
+    - cron: '10 13 * * *'
+    - cron: '10 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  scan-and-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run trading scanner notify
+        env:
+          EXCEL_FILE: ./scoring_notify.xlsx
+          LOG_DIR: ./logs_notify
+          CACHE_DIR: ./cache_notify
+          LONG_THRESHOLD: 26
+          SHORT_THRESHOLD: 24
+          BYBIT_API_KEY: ${{ secrets.BYBIT_API_KEY }}
+          BYBIT_API_SECRET: ${{ secrets.BYBIT_API_SECRET }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python trading_scanner_notify.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoring-results
+          path: |
+            scoring_notify.xlsx
+            logs_notify/
+          retention-days: 30
